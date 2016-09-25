@@ -9,7 +9,7 @@ defmodule Backstage.Consumer do
   @name __MODULE__
 
   def start_link() do
-    GenStage.start_link(__MODULE__, %{repo: nil}, name: @name)
+    GenStage.start_link(__MODULE__, %{repo: nil, running_jobs: %{}}, name: @name)
   end
 
   ## Callbacks
@@ -22,84 +22,79 @@ defmodule Backstage.Consumer do
     {:consumer, state, subscribe_to: [{Backstage.Producer, min_demand: 0, max_demand: 1}]}
   end
 
-  def handle_events(jobs, _from, %{repo: repo} = state) do
+  def handle_events(jobs, _from, %{running_jobs: running_jobs} = state) do
     running_jobs =
-      for job <- jobs do
+      for job <- jobs, into: running_jobs do
         task = start_task(job)
-        timer_ref = :erlang.start_timer(job.timeout, self(), {task, job})
-        {task.ref, %{job: job, timer_ref: timer_ref}}
+        timer = :erlang.start_timer(job.timeout, self(), task.ref)
+        {task.ref, %{task: task, job_id: job.id, timer: timer}}
       end
-      |> Enum.into(%{})
 
     state = Map.put(state, :running_jobs, running_jobs)
 
     {:noreply, [], state}
   end
 
-  def handle_info({ref, {:ok, job}}, %{repo: repo, running_jobs: running_jobs} = state) do
-    IO.inspect {ref, job}
+  def handle_info({ref, _reply}, %{repo: repo, running_jobs: running_jobs} = state) do
+    Process.demonitor(ref, [:flush])
 
-    timer_ref = running_jobs[ref][:timer_ref]
-    :erlang.cancel_timer(timer_ref)
-
-    Job.update_status(repo, job, "success")
-
-    running_jobs = Map.delete(state.running_jobs, ref)
+    {%{job_id: job_id, timer: timer}, running_jobs} = Map.pop(running_jobs, ref)
     state = %{state | running_jobs: running_jobs}
 
+    :ok = cancel_timer(timer)
+
+    Job.update_status(repo, job_id, "success")
+
     {:noreply, [], state}
   end
 
-  def handle_info({ref, {:error, job, reason}}, %{repo: repo, running_jobs: running_jobs} = state) do
-    IO.inspect {ref, job, reason}
-
-    timer_ref = running_jobs[ref][:timer_ref]
-    :erlang.cancel_timer(timer_ref)
-
-    Job.update_error(repo, job, "error", reason)
-
-    running_jobs = Map.delete(state.running_jobs, ref)
+  def handle_info({:DOWN, ref, :process, _pid, reason}, %{repo: repo, running_jobs: running_jobs} = state) do
+    {%{job_id: job_id, timer: timer}, running_jobs} = Map.pop(running_jobs, ref)
     state = %{state | running_jobs: running_jobs}
 
-    {:noreply, [], state}
-  end
+    :ok = cancel_timer(timer)
 
-  def handle_info({:DOWN, ref, :process, pid, :normal}, state) do
-    IO.inspect {ref, pid, :normal}
-
-    # TODO: nothing to do here?
-
-    {:noreply, [], state}
-  end
-
-  def handle_info({:DOWN, ref, :process, pid, reason}, %{repo: repo, running_jobs: running_jobs} = state) do
-    IO.inspect {ref, pid, reason}
-
-    timer_ref = running_jobs[ref][:timer_ref]
-    :erlang.cancel_timer(timer_ref)
-
-    job = running_jobs[ref][:job]
-    Job.update_error(repo, job, "error", to_string(reason))
-
-    running_jobs = Map.delete(state.running_jobs, ref)
-    state = %{state | running_jobs: running_jobs}
-
-    {:noreply, [], state}
-  end
-
-  def handle_info({:timeout, timer_ref, {task, job}}, %{repo: repo, running_jobs: running_jobs} = state) do
-    IO.inspect {:timeout, timer_ref, task, job}
-
-    if Process.alive?(task.pid) do
-      Task.shutdown(task, :brutal_kill)
+    case reason do
+      :normal ->
+        Job.update_status(repo, job_id, "success")
+      reason ->
+        formatted_error = Exception.format_exit(reason)
+        Job.update_error(repo, job_id, "error", formatted_error)
     end
 
-    Job.update_error(repo, job, "error", "timed out after #{job.timeout} ms")
+    {:noreply, [], state}
+  end
 
-    running_jobs = Map.delete(state.running_jobs, task.ref)
+  def handle_info({:timeout, _timer_ref, task_ref}, %{repo: repo, running_jobs: running_jobs} = state) do
+    {%{task: task, job_id: job_id}, running_jobs} = Map.pop(running_jobs, task_ref)
     state = %{state | running_jobs: running_jobs}
 
+    case Task.shutdown(task, :brutal_kill) do
+      {:ok, _reply} ->
+        Job.update_status(repo, job_id, "success")
+      {:exit, :normal} ->
+        Job.update_status(repo, job_id, "success")
+      {:exit, reason} ->
+        formatted_error = Exception.format_exit(reason)
+        Job.update_error(repo, job_id, "error", formatted_error)
+      nil ->
+        Job.update_error(repo, job_id, "error", "timed out")
+    end
+
     {:noreply, [], state}
+  end
+
+  defp cancel_timer(timer) do
+    case :erlang.cancel_timer(timer) do
+      false ->
+        receive do
+          {:timeout, ^timer, _} -> :ok
+        after
+          0 -> raise "timer could not be found"
+        end
+      rem when is_integer(rem) ->
+        :ok
+    end
   end
 
   defp start_task(job) do

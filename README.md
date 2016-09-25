@@ -75,6 +75,7 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
 ## Notes
 
 * Logging
+* https://github.com/stevedomin/backstage/pull/1#discussion_r80389826
 * Try/catch errors in jobs (exception tracking)
 * Currently polling Postgres for new jobs every X ms. Could we use LISTEN/NOTIFY?
 * Think about the implications of gen_stage events buffering

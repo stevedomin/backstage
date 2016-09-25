@@ -38,8 +38,8 @@ defmodule Backstage.Job do
     field :status, :string
     field :priority, :integer, default: 100
     field :timeout, :integer, default: -1
-    # field :started_at, DateTime
     # field :scheduled_at, DateTime
+    # field :started_at, DateTime
     # field :retryable, bool
     field :failure_count, :integer, default: 0
     field :last_error, :string
@@ -52,18 +52,7 @@ defmodule Backstage.Job do
   # The alternative is to assume the job is successful if it returns anything except {:error, reason}
   def run(%__MODULE__{} = job) do
     {mod, fun, args} = :erlang.binary_to_term(job.payload)
-    case apply(mod, fun, args) do
-      :ok -> {:ok, job}
-      {:error, reason} -> {:error, job, reason}
-      other ->
-        {:error, job, :bad_return_value}
-    end
-  rescue
-    error ->
-      formatted_error = Exception.format(:error, error)
-      # TODO: is it worth passing the raw exception as well? Might be useful for
-      # 3rd party error handler
-      {:error, job, formatted_error}
+    apply(mod, fun, args)
   end
 
   # TODO: guard with when is_map(args)?
@@ -97,9 +86,9 @@ defmodule Backstage.Job do
     {count, jobs}
   end
 
-  def update_status(repo, job, status) do
+  def update_status(repo, job_id, status) do
     # TODO: validate status?
-    [job.id]
+    [job_id]
     |> by_ids()
     |> repo.update_all(
       [set: [status: status, updated_at: Ecto.DateTime.utc]],
@@ -107,9 +96,9 @@ defmodule Backstage.Job do
     )
   end
 
-  def update_error(repo, job, status, error \\ nil) do
+  def update_error(repo, job_id, status, error \\ nil) do
     # TODO: validate status?
-    [job.id]
+    [job_id]
     |> by_ids()
     |> repo.update_all(
       [set: [status: status, last_error: error, updated_at: Ecto.DateTime.utc], inc: [failure_count: 1]],
