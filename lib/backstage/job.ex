@@ -48,13 +48,6 @@ defmodule Backstage.Job do
     timestamps usec: true
   end
 
-  # TODO: think about whether we want to enforce jobs having to return :ok to indicate they're successful
-  # The alternative is to assume the job is successful if it returns anything except {:error, reason}
-  def run(%__MODULE__{} = job) do
-    {mod, fun, args} = :erlang.binary_to_term(job.payload)
-    apply(mod, fun, args)
-  end
-
   # TODO: guard with when is_map(args)?
   def enqueue(repo, mod, args, opts \\ [priority: 100, timeout: -1, scheduled_at: nil]) do
     repo.insert(%__MODULE__{

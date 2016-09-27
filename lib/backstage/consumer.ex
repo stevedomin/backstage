@@ -98,6 +98,8 @@ defmodule Backstage.Consumer do
   end
 
   defp start_task(job) do
-    Task.Supervisor.async_nolink(Backstage.TaskSupervisor, Backstage.Job, :run, [job])
+    {mod, fun, args} = :erlang.binary_to_term(job.payload)
+
+    Task.Supervisor.async_nolink(Backstage.TaskSupervisor, mod, fun, args)
   end
 end
