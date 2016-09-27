@@ -44,23 +44,6 @@ defmodule Backstage.JobTest do
     end
   end
 
-  describe "Backstage.Job.run/3" do
-    test "is successful" do
-      assert :ok == Job.run(FakeWorkingJob, :run, [%{}])
-    end
-
-    test "rescues any error raised" do
-      assert {:error, _reason} = Job.run(FakeFailingJob, :run, [%{}])
-    end
-
-    test "returns a formatted message with stacktrace if an error was raised" do
-      assert {:error, reason} = Job.run(FakeFailingJob, :run, [%{}])
-      assert reason =~ """
-        ** (UndefinedFunctionError) function :oops.exception/1 is undefined (module :oops is not available)
-        """
-    end
-  end
-
   describe "Backstage.Job.take/2" do
     setup [:enqueue_sample_jobs]
 
