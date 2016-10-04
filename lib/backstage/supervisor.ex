@@ -8,12 +8,19 @@ defmodule Backstage.Supervisor do
   ## Callbacks
 
   def init([]) do
+    true = prepare_repo()
+
     children = [
-      supervisor(Task.Supervisor, [[name: Backstage.TaskSupervisor]]),
       worker(Backstage.Producer, []),
       worker(Backstage.Consumer, []),
     ]
 
     supervise(children, strategy: :one_for_one)
+  end
+
+  defp prepare_repo() do
+    repo = Application.get_env(:backstage, :repo)
+    table = :ets.new(:backstage, [:named_table, :set, :protected])
+    :ets.insert(table, {:repo, repo})
   end
 end

@@ -42,3 +42,5 @@ _   = Ecto.Adapters.Postgres.storage_down(TestRepo.config)
 Ecto.Adapters.SQL.Sandbox.mode(TestRepo, :manual)
 Process.flag(:trap_exit, true)
 
+table = :ets.new(:backstage, [:named_table, :set, :protected])
+:ets.insert(table, {:repo, TestRepo})
