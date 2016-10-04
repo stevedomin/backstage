@@ -18,11 +18,21 @@ defmodule Backstage.JobTest do
     def run(_arg), do: :important
   end
 
-  setup_all do
-    table = :ets.new(:backstage, [:named_table, :set, :protected])
-    :ets.insert(table, {:repo, Repo})
+  describe "macro Backstage.Job.enqueue/1" do
+    test "returns {:ok, job} when job is enqueued successfully" do
+      assert total_job_count() == 0
+      assert {:ok, _job} = FakeWorkingJob.enqueue(%{})
+      assert total_job_count() == 1
+    end
 
-    :ok
+    test "raises when payload is not a map" do
+      assert total_job_count() == 0
+      message = ~s(expected payload to be a map, got "testing")
+      assert_raise ArgumentError, message, fn ->
+        FakeWorkingJob.enqueue("testing")
+      end
+      assert total_job_count() == 0
+    end
   end
 
   describe "Backstage.Job.enqueue/3" do
@@ -41,23 +51,6 @@ defmodule Backstage.JobTest do
         Repo.rollback(:random_error_during_tx)
       end
       assert total_job_count() == 0
-    end
-  end
-
-  describe "Backstage.Job.run/3" do
-    test "is successful" do
-      assert :ok == Job.run(FakeWorkingJob, :run, [%{}])
-    end
-
-    test "rescues any error raised" do
-      assert {:error, _reason} = Job.run(FakeFailingJob, :run, [%{}])
-    end
-
-    test "returns a formatted message with stacktrace if an error was raised" do
-      assert {:error, reason} = Job.run(FakeFailingJob, :run, [%{}])
-      assert reason =~ """
-        ** (UndefinedFunctionError) function :oops.exception/1 is undefined (module :oops is not available)
-        """
     end
   end
 

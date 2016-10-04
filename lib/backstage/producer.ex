@@ -15,13 +15,10 @@ defmodule Backstage.Producer do
   ## Callbacks
 
   def init(state) do
-    repo = Application.get_env(:backstage, :repo)
-    table = :ets.new(:backstage, [:named_table, :set, :protected])
-    :ets.insert(table, {:repo, repo})
-
+    [{:repo, repo}] = :ets.lookup(:backstage, :repo)
     state = %{state | repo: repo}
 
-    #Process.send_after(self(), :poll, 10_000)
+    Process.send_after(self(), :poll, 1_000)
     {:producer, state}
   end
 
@@ -29,9 +26,9 @@ defmodule Backstage.Producer do
     send_jobs(repo, demand + count)
   end
 
-  def handle_info(:poll, state) do
-    #Process.send_after(self(), :poll, 10_000)
-    #send_jobs(state)
+  def handle_info(:poll, %{repo: repo, count: count}) do
+    Process.send_after(self(), :poll, 1_000)
+    send_jobs(repo, count)
   end
 
   defp send_jobs(repo, 0) do

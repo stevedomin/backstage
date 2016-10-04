@@ -3,7 +3,7 @@ defmodule Backstage.Job do
 
   import Ecto.Query
 
-  @callback run(args :: any) :: any
+  @callback run(payload :: map) :: none
 
   @running_status "running"
   @pending_status "pending"
@@ -18,13 +18,14 @@ defmodule Backstage.Job do
 
       # def batch_enqueue([args]) || enqueue(args) when is_list(args)
 
-      # TODO: Is the guard necessary or should we enforce getting a map as an argument?
       # TODO: allow overriding 'priority' when enqueuing a job
-      def enqueue(args) when is_list(args) do
-        Backstage.Job.enqueue(repo(), __MODULE__, args, [priority: @priority, timeout: @timeout])
+      def enqueue(payload) when is_map(payload) do
+        opts = [priority: @priority, timeout: @timeout]
+        Backstage.Job.enqueue(repo(), __MODULE__, payload, opts)
       end
-      def enqueue(args) do
-        enqueue([args])
+
+      def enqueue(payload) do
+        raise ArgumentError, "expected payload to be a map, got #{inspect(payload)}"
       end
 
       defp repo() do
@@ -35,6 +36,8 @@ defmodule Backstage.Job do
   end
 
   schema "jobs" do
+    field :module, :string
+    field :payload, :map
     field :status, :string
     field :priority, :integer, default: 100
     field :timeout, :integer, default: -1
@@ -43,26 +46,17 @@ defmodule Backstage.Job do
     # field :retryable, bool
     field :failure_count, :integer, default: 0
     field :last_error, :string
-    field :payload, :binary
 
     timestamps usec: true
   end
 
-  # TODO: think about whether we want to enforce jobs having to return :ok to indicate they're successful
-  # The alternative is to assume the job is successful if it returns anything except {:error, reason}
-  def run(%__MODULE__{} = job) do
-    {mod, fun, args} = :erlang.binary_to_term(job.payload)
-    apply(mod, fun, args)
-  end
-
-  # TODO: guard with when is_map(args)?
-  def enqueue(repo, mod, args, opts \\ [priority: 100, timeout: -1, scheduled_at: nil]) do
+  def enqueue(repo, module, payload, opts \\ [priority: 100, timeout: -1, scheduled_at: nil]) do
     repo.insert(%__MODULE__{
+      module: to_string(module),
+      payload: payload,
       status: @pending_status,
       priority: opts[:priority],
       timeout: opts[:timeout],
-      # TODO: might be worth not hardcoding :run here
-      payload: :erlang.term_to_binary({mod, :run, args}),
     })
   end
 

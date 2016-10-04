@@ -4,6 +4,8 @@ defmodule Backstage.Consumer do
   use Experimental.GenStage
 
   alias Experimental.GenStage
+
+  alias Backstage.TaskSupervisor
   alias Backstage.Job
 
   @name __MODULE__
@@ -19,14 +21,14 @@ defmodule Backstage.Consumer do
     state = %{state | repo: repo}
 
     # TODO: make the subscription configurable {Backstage.Producer, Application.get_env(:backstage, :sub_opts)}
-    {:consumer, state, subscribe_to: [{Backstage.Producer, min_demand: 0, max_demand: 1}]}
+    {:consumer, state, subscribe_to: [Backstage.Producer]}
   end
 
   def handle_events(jobs, _from, %{running_jobs: running_jobs} = state) do
     running_jobs =
       for job <- jobs, into: running_jobs do
         task = start_task(job)
-        timer = :erlang.start_timer(job.timeout, self(), task.ref)
+        timer = start_timer(job, task)
         {task.ref, %{task: task, job_id: job.id, timer: timer}}
       end
 
@@ -84,6 +86,7 @@ defmodule Backstage.Consumer do
     {:noreply, [], state}
   end
 
+  defp cancel_timer(nil), do: :ok
   defp cancel_timer(timer) do
     case :erlang.cancel_timer(timer) do
       false ->
@@ -98,6 +101,11 @@ defmodule Backstage.Consumer do
   end
 
   defp start_task(job) do
-    Task.Supervisor.async_nolink(Backstage.TaskSupervisor, Backstage.Job, :run, [job])
+    Task.Supervisor.async_nolink(TaskSupervisor, String.to_atom(job.module), :run, [job.payload])
+  end
+
+  defp start_timer(%Job{timeout: -1}, _task), do: nil
+  defp start_timer(job, task) do
+    :erlang.start_timer(job.timeout, self(), task.ref)
   end
 end

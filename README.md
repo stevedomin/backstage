@@ -52,40 +52,13 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
     end
     ```
 
-## Ideas
-
-### v1
-
-* Pretty much a port of existing bg job systems (Que, etc.)
-* Probably not using gen_stage at its full potential
-  * n Consumers sending demands to 1 (n?) Producer
-  * No complex pipelines or flow of messages
-* All the logic for running the job, handling success/failures, etc. is split between the Consumer and Job module
-
-### Next
-
-* Maximise gen_stage's usage
-  * Express pipelines rather than jobs
-  * Could things like failure handling, retries, etc. be another consumer that you would decide to "plug" or not into your job pipeline
-    * What happens when the job fails in the middle of the pipeline?
-* Currently the only storage backend is Postgres but could we have an adapter based system?
-    * redis
-    * memory?
-
-## Notes
+## TODO
 
 * Logging
 * https://github.com/stevedomin/backstage/pull/1#discussion_r80389826
-* Try/catch errors in jobs (exception tracking)
 * Currently polling Postgres for new jobs every X ms. Could we use LISTEN/NOTIFY?
 * Think about the implications of gen_stage events buffering
 * Retries/backoff
-* Erlang ETF is nice for prototyping but not as good for introspection and potential ports in other languages.
-* Start the consumers/producers
-  * Config to decide whether to add to the supervision tree automatically
-  * Otherwise start with mix task
-  * Config to decide how many producers/consumers you want
-  * Think about benefits of having multiple producers
 * Separate table for failed jobs?
 * Vacuum the successful/failed jobs
 * UI to list jobs, failures, retry, etc.
