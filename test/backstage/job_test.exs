@@ -81,6 +81,17 @@ defmodule Backstage.JobTest do
       assert {^important_job_count, jobs} = Job.take(Repo, important_job_count)
       assert Enum.all?(jobs, fn (job) -> job.priority == 120 end)
     end
+
+    test "does not return jobs scheduled in the future", %{pending_job_count: pending_job_count} do
+      assert pending_job_count() == pending_job_count
+
+      {{y, m, d}, time} = Ecto.DateTime.to_erl(Ecto.DateTime.utc)
+      future_date = Ecto.DateTime.from_erl({{y+1, m, d}, time})
+
+      FakeWorkingJob.enqueue(%{}, scheduled_at: future_date)
+
+      assert {^pending_job_count, _jobs} = Job.take(Repo, 1000)
+    end
   end
 
   defp enqueue_sample_jobs(_context) do

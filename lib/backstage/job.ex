@@ -15,16 +15,19 @@ defmodule Backstage.Job do
 
       @priority opts[:priority] || 100
       @timeout opts[:timeout] || -1
+      @retryable opts[:retryable] || true
 
       # def batch_enqueue([args]) || enqueue(args) when is_list(args)
 
-      # TODO: allow overriding 'priority' when enqueuing a job
-      def enqueue(payload) when is_map(payload) do
-        opts = [priority: @priority, timeout: @timeout]
+      def enqueue(payload, opts \\ [])
+      def enqueue(payload, opts) when is_map(payload) do
+        opts =
+          [priority: @priority, timeout: @timeout, retryable: @retryable]
+          |> Keyword.merge(opts)
+
         Backstage.Job.enqueue(repo(), __MODULE__, payload, opts)
       end
-
-      def enqueue(payload) do
+      def enqueue(payload, _opts) do
         raise ArgumentError, "expected payload to be a map, got #{inspect(payload)}"
       end
 
@@ -41,22 +44,23 @@ defmodule Backstage.Job do
     field :status, :string
     field :priority, :integer, default: 100
     field :timeout, :integer, default: -1
-    # field :scheduled_at, DateTime
-    # field :started_at, DateTime
-    # field :retryable, bool
+    field :scheduled_at, Ecto.DateTime
+    field :retryable, :boolean
     field :failure_count, :integer, default: 0
     field :last_error, :string
 
     timestamps usec: true
   end
 
-  def enqueue(repo, module, payload, opts \\ [priority: 100, timeout: -1, scheduled_at: nil]) do
+  def enqueue(repo, module, payload, opts \\ [priority: 100, timeout: -1, retryable: true]) do
     repo.insert(%__MODULE__{
       module: to_string(module),
       payload: payload,
       status: @pending_status,
       priority: opts[:priority],
       timeout: opts[:timeout],
+      scheduled_at: opts[:scheduled_at],
+      retryable: opts[:retryable]
     })
   end
 
@@ -73,7 +77,7 @@ defmodule Backstage.Job do
       |> repo.update_all(
         # TODO: should this be set to an intermediary status like "processed"?
         # And then to running when the job has actually reached a consumer
-        [set: [status: @running_status, updated_at: Ecto.DateTime.utc]],
+        [set: [status: @running_status, updated_at: Ecto.DateTime.utc(:usec)]],
         [returning: true]
       )
     end
@@ -85,7 +89,7 @@ defmodule Backstage.Job do
     [job_id]
     |> by_ids()
     |> repo.update_all(
-      [set: [status: status, updated_at: Ecto.DateTime.utc]],
+      [set: [status: status, updated_at: Ecto.DateTime.utc(:usec)]],
       [returning: true]
     )
   end
@@ -95,14 +99,14 @@ defmodule Backstage.Job do
     [job_id]
     |> by_ids()
     |> repo.update_all(
-      [set: [status: status, last_error: error, updated_at: Ecto.DateTime.utc], inc: [failure_count: 1]],
+      [set: [status: status, last_error: error, updated_at: Ecto.DateTime.utc(:usec)], inc: [failure_count: 1]],
       [returning: true]
     )
   end
 
   defp pending(limit) do
     from(j in __MODULE__,
-      where: j.status == @pending_status,
+      where: j.status == @pending_status and j.scheduled_at <= fragment("now()"),
       limit: ^limit,
       order_by: [desc: j.priority],
       select: j.id,
