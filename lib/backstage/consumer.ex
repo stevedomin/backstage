@@ -45,7 +45,7 @@ defmodule Backstage.Consumer do
 
     :ok = cancel_timer(timer)
 
-    Job.update_status(repo, job_id, "success")
+    handle_success(repo, job_id)
 
     {:noreply, [], state}
   end
@@ -58,7 +58,7 @@ defmodule Backstage.Consumer do
 
     case reason do
       :normal ->
-        Job.update_status(repo, job_id, "success")
+        handle_success(repo, job_id)
       reason ->
         formatted_error = Exception.format_exit(reason)
         Job.update_error(repo, job_id, "error", formatted_error)
@@ -73,9 +73,9 @@ defmodule Backstage.Consumer do
 
     case Task.shutdown(task, :brutal_kill) do
       {:ok, _reply} ->
-        Job.update_status(repo, job_id, "success")
+        handle_success(repo, job_id)
       {:exit, :normal} ->
-        Job.update_status(repo, job_id, "success")
+        handle_success(repo, job_id)
       {:exit, reason} ->
         formatted_error = Exception.format_exit(reason)
         Job.update_error(repo, job_id, "error", formatted_error)
@@ -84,6 +84,10 @@ defmodule Backstage.Consumer do
     end
 
     {:noreply, [], state}
+  end
+
+  defp handle_success(repo, job_id) do
+    Job.delete(repo, job_id)
   end
 
   defp cancel_timer(nil), do: :ok

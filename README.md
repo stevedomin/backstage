@@ -58,9 +58,9 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
 * https://github.com/stevedomin/backstage/pull/1#discussion_r80389826
 * Currently polling Postgres for new jobs every X ms. Could we use LISTEN/NOTIFY?
 * Think about the implications of gen_stage events buffering
+* Make it possible to destroy the job as part of a transaction in "userland"
 * Retries/backoff
-* Separate table for failed jobs?
-* Vacuum the successful/failed jobs
+* Vacuum the failed jobs?
 * UI to list jobs, failures, retry, etc.
   * Separate package
 * scheduler

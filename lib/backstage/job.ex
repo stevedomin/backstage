@@ -84,18 +84,13 @@ defmodule Backstage.Job do
     {count, jobs}
   end
 
-  def update_status(repo, job_id, status) do
-    # TODO: validate status?
+  def delete(repo, job_id) do
     [job_id]
     |> by_ids()
-    |> repo.update_all(
-      [set: [status: status, updated_at: Ecto.DateTime.utc(:usec)]],
-      [returning: true]
-    )
+    |> repo.delete_all(returning: false)
   end
 
   def update_error(repo, job_id, status, error \\ nil) do
-    # TODO: validate status?
     [job_id]
     |> by_ids()
     |> repo.update_all(

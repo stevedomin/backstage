@@ -64,7 +64,7 @@ defmodule Backstage.ConsumerTest do
     # TODO: Find a way around this
     :timer.sleep(500)
 
-    assert successful_job_count() == 10
+    assert successful_job_count() == 0
   end
 
   test "jobs timing out" do

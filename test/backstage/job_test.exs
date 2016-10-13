@@ -54,6 +54,16 @@ defmodule Backstage.JobTest do
     end
   end
 
+  describe "Backstage.Job.delete/2" do
+    test "deletes the job" do
+      assert total_job_count() == 0
+      assert {:ok, job} = Job.enqueue(Repo, __MODULE__, %{})
+      assert total_job_count() == 1
+      assert {1, nil} = Job.delete(Repo, job.id)
+      assert total_job_count() == 0
+    end
+  end
+
   describe "Backstage.Job.take/2" do
     setup [:enqueue_sample_jobs]
 
