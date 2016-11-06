@@ -16,7 +16,7 @@ defmodule Backstage.Producer do
   ## Callbacks
 
   def init(state) do
-    Process.send_after(self(), :poll, 1_000)
+    Process.send_after(self(), :poll, poll_interval)
     {:producer, state}
   end
 
@@ -25,7 +25,7 @@ defmodule Backstage.Producer do
   end
 
   def handle_info(:poll, %{repo: repo, count: count}) do
-    Process.send_after(self(), :poll, 1_000)
+    Process.send_after(self(), :poll, poll_interval)
     send_jobs(repo, count)
   end
 
@@ -35,5 +35,9 @@ defmodule Backstage.Producer do
   defp send_jobs(repo, limit) when limit > 0 do
     {count, jobs} = Job.take(repo, limit)
     {:noreply, jobs, %{repo: repo, count: limit - count}}
+  end
+
+  defp poll_interval do
+    Application.get_env(:backstage, :poll_interval) || 1000
   end
 end
