@@ -10,16 +10,14 @@ defmodule Backstage.Consumer do
 
   @name __MODULE__
 
-  def start_link() do
-    GenStage.start_link(__MODULE__, %{repo: nil, running_jobs: %{}}, name: @name)
+  def start_link(opts) do
+    repo = Keyword.get(opts, :repo)
+    GenStage.start_link(__MODULE__, %{repo: repo, running_jobs: %{}}, name: @name)
   end
 
   ## Callbacks
 
   def init(state) do
-    [{:repo, repo}] = :ets.lookup(:backstage, :repo)
-    state = %{state | repo: repo}
-
     # TODO: make the subscription configurable {Backstage.Producer, Application.get_env(:backstage, :sub_opts)}
     {:consumer, state, subscribe_to: [Backstage.Producer]}
   end

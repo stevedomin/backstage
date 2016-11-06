@@ -8,16 +8,14 @@ defmodule Backstage.Producer do
 
   @name __MODULE__
 
-  def start_link() do
-    GenStage.start_link(__MODULE__, %{repo: nil, count: 0}, name: @name)
+  def start_link(opts) do
+    repo = Keyword.get(opts, :repo)
+    GenStage.start_link(__MODULE__, %{repo: repo, count: 0}, name: @name)
   end
 
   ## Callbacks
 
   def init(state) do
-    [{:repo, repo}] = :ets.lookup(:backstage, :repo)
-    state = %{state | repo: repo}
-
     Process.send_after(self(), :poll, 1_000)
     {:producer, state}
   end

@@ -35,9 +35,9 @@ defmodule Backstage.ConsumerTest do
   end
 
   setup do
-    {:ok, producer} = Producer.start_link()
+    {:ok, producer} = Producer.start_link(repo: Repo)
     Ecto.Adapters.SQL.Sandbox.allow(Repo, self(), producer)
-    {:ok, consumer} = Consumer.start_link()
+    {:ok, consumer} = Consumer.start_link(repo: Repo)
     Ecto.Adapters.SQL.Sandbox.allow(Repo, self(), consumer)
 
     #on_exit fn ->
