@@ -17,23 +17,24 @@ defmodule Backstage.Job do
       @timeout opts[:timeout] || -1
       @retryable opts[:retryable] || true
 
-      # def batch_enqueue([args]) || enqueue(args) when is_list(args)
-
-      def enqueue(payload, opts \\ [])
-      def enqueue(payload, opts) when is_map(payload) do
+      def new(payload, opts \\ [])
+      def new(payload, opts) when is_map(payload) do
         opts =
           [priority: @priority, timeout: @timeout, retryable: @retryable]
           |> Keyword.merge(opts)
 
-        Backstage.Job.enqueue(repo(), __MODULE__, payload, opts)
+        %Backstage.Job{
+          module: to_string(__MODULE__),
+          payload: payload,
+          status: "pending",
+          priority: opts[:priority],
+          timeout: opts[:timeout],
+          scheduled_at: opts[:scheduled_at],
+          retryable: opts[:retryable]
+        }
       end
-      def enqueue(payload, _opts) do
+      def new(payload, _opts) do
         raise ArgumentError, "expected payload to be a map, got #{inspect(payload)}"
-      end
-
-      defp repo() do
-        [{:repo, repo}] = :ets.lookup(:backstage, :repo)
-        repo
       end
     end
   end
@@ -50,18 +51,6 @@ defmodule Backstage.Job do
     field :last_error, :string
 
     timestamps usec: true
-  end
-
-  def enqueue(repo, module, payload, opts \\ [priority: 100, timeout: -1, retryable: true]) do
-    repo.insert(%__MODULE__{
-      module: to_string(module),
-      payload: payload,
-      status: @pending_status,
-      priority: opts[:priority],
-      timeout: opts[:timeout],
-      scheduled_at: opts[:scheduled_at],
-      retryable: opts[:retryable]
-    })
   end
 
   # TODO: When limit > 1 the batch that will be returned by this function won't

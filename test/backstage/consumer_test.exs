@@ -52,7 +52,7 @@ defmodule Backstage.ConsumerTest do
     parent = :erlang.pid_to_list(self())
 
     for _ <- 1..10 do
-      {:ok, _job} = WorkingJob.enqueue(%{pid: parent})
+      {:ok, _job} = WorkingJob.new(%{pid: parent}) |> Repo.insert
     end
 
     assert total_job_count() == 10
@@ -71,7 +71,7 @@ defmodule Backstage.ConsumerTest do
     parent = :erlang.pid_to_list(self())
 
     for _ <- 1..10 do
-      {:ok, _job} = TimingOutJob.enqueue(%{pid: parent})
+      {:ok, _job} = TimingOutJob.new(%{pid: parent}) |> Repo.insert
     end
 
     assert total_job_count() == 10
@@ -86,9 +86,7 @@ defmodule Backstage.ConsumerTest do
     parent = :erlang.pid_to_list(self())
 
     capture_log(fn ->
-      for _ <- 1..10 do
-        {:ok, _job} = FailingJob.enqueue(%{pid: parent})
-      end
+      for _ <- 1..10, do: {:ok, _job} = FailingJob.new(%{pid: parent}) |> Repo.insert
 
       assert total_job_count() == 10
 

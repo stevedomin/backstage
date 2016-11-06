@@ -14,7 +14,7 @@ defmodule MyApp.Jobs.WelcomeNotification do
   end
 end
 
-iex> {:ok, job} = MyApp.Jobs.WelcomeNotification.enqueue(%{user_id: user.id})
+iex> {:ok, job} = MyApp.Jobs.WelcomeNotification.new(%{user_id: user.id}) |> Repo.insert
 ```
 
 ## Installation

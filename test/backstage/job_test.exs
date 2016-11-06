@@ -18,46 +18,28 @@ defmodule Backstage.JobTest do
     def run(_arg), do: :important
   end
 
-  describe "macro Backstage.Job.enqueue/1" do
-    test "returns {:ok, job} when job is enqueued successfully" do
-      assert total_job_count() == 0
-      assert {:ok, _job} = FakeWorkingJob.enqueue(%{})
-      assert total_job_count() == 1
+  describe "macro Backstage.Job.new/1" do
+    test "returns job with default options" do
+      job = FakeWorkingJob.new(%{})
+      assert job.status == "pending"
+      assert job.priority == 100
+      assert job.timeout == -1
+      assert job.scheduled_at == nil
+      assert job.retryable == true
     end
 
     test "raises when payload is not a map" do
-      assert total_job_count() == 0
       message = ~s(expected payload to be a map, got "testing")
       assert_raise ArgumentError, message, fn ->
-        FakeWorkingJob.enqueue("testing")
+        FakeWorkingJob.new("testing")
       end
-      assert total_job_count() == 0
-    end
-  end
-
-  describe "Backstage.Job.enqueue/3" do
-    test "returns {:ok, job} when successful" do
-      assert total_job_count() == 0
-      assert {:ok, _job} = Job.enqueue(Repo, __MODULE__, %{})
-      assert total_job_count() == 1
-    end
-
-    test "returns {:error, reason} when it fails"
-
-    test "is rollbacked if the transaction is aborted" do
-      assert total_job_count() == 0
-      Repo.transaction fn ->
-        assert {:ok, _job} = Job.enqueue(Repo, __MODULE__, %{})
-        Repo.rollback(:random_error_during_tx)
-      end
-      assert total_job_count() == 0
     end
   end
 
   describe "Backstage.Job.delete/2" do
     test "deletes the job" do
       assert total_job_count() == 0
-      assert {:ok, job} = Job.enqueue(Repo, __MODULE__, %{})
+      assert {:ok, job} = FakeWorkingJob.new(%{}) |> Repo.insert
       assert total_job_count() == 1
       assert {1, nil} = Job.delete(Repo, job.id)
       assert total_job_count() == 0
@@ -98,7 +80,8 @@ defmodule Backstage.JobTest do
       {{y, m, d}, time} = Ecto.DateTime.to_erl(Ecto.DateTime.utc)
       future_date = Ecto.DateTime.from_erl({{y+1, m, d}, time})
 
-      FakeWorkingJob.enqueue(%{}, scheduled_at: future_date)
+      FakeWorkingJob.new(%{}, scheduled_at: future_date)
+      |> Repo.insert
 
       assert {^pending_job_count, _jobs} = Job.take(Repo, 1000)
     end
@@ -111,11 +94,11 @@ defmodule Backstage.JobTest do
     pending_job_count = working_job_count + failing_job_count + important_job_count
 
     # enqueue a couple of working jobs
-    for _ <- 1..working_job_count, do: {:ok, _job} = FakeWorkingJob.enqueue(%{})
+    for _ <- 1..working_job_count, do: {:ok, _job} = FakeWorkingJob.new(%{}) |> Repo.insert
     # enqueue a couple of failing jobs
-    for _ <- 1..failing_job_count, do: {:ok, _job} = FakeFailingJob.enqueue(%{})
+    for _ <- 1..failing_job_count, do: {:ok, _job} = FakeFailingJob.new(%{}) |> Repo.insert
     # enqueue a couple of jobs with higher priority
-    for _ <- 1..important_job_count, do: {:ok, _job} = FakeImportantJob.enqueue(%{})
+    for _ <- 1..important_job_count, do: {:ok, _job} = FakeImportantJob.new(%{}) |> Repo.insert
 
     {:ok, working_job_count: working_job_count,
           failing_job_count: failing_job_count,
