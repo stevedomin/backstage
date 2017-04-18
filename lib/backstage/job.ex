@@ -66,7 +66,7 @@ defmodule Backstage.Job do
       |> repo.update_all(
         # TODO: should this be set to an intermediary status like "processed"?
         # And then to running when the job has actually reached a consumer
-        [set: [status: @running_status, updated_at: Ecto.DateTime.utc(:usec)]],
+        [set: [status: @running_status, updated_at: DateTime.utc_now()]],
         [returning: true]
       )
     end
@@ -83,7 +83,7 @@ defmodule Backstage.Job do
     [job_id]
     |> by_ids()
     |> repo.update_all(
-      [set: [status: status, last_error: error, updated_at: Ecto.DateTime.utc(:usec)], inc: [failure_count: 1]],
+      [set: [status: status, last_error: error, updated_at: DateTime.utc_now()], inc: [failure_count: 1]],
       [returning: true]
     )
   end

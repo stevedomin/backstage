@@ -8,7 +8,7 @@ defmodule Backstage.TestMigration do
       add :status, :string, null: false
       add :priority, :smallint, null: false, default: 100
       add :timeout, :integer, null: false
-      add :scheduled_at, :datetime, null: false, default: fragment("now()")
+      add :scheduled_at, :naive_datetime, null: false, default: fragment("now()")
       add :retryable, :boolean, null: false, default: true
       add :failure_count, :integer, null: false, default: 0
       add :last_error, :text
