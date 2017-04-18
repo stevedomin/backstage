@@ -16,7 +16,7 @@ defmodule Backstage.Producer do
   ## Callbacks
 
   def init(state) do
-    Process.send_after(self(), :poll, poll_interval)
+    Process.send_after(self(), :poll, poll_interval())
     {:producer, state}
   end
 
@@ -25,7 +25,7 @@ defmodule Backstage.Producer do
   end
 
   def handle_info(:poll, %{repo: repo, count: count}) do
-    Process.send_after(self(), :poll, poll_interval)
+    Process.send_after(self(), :poll, poll_interval())
     send_jobs(repo, count)
   end
 

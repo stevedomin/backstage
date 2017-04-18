@@ -4,7 +4,7 @@ defmodule Backstage.Mixfile do
   def project do
     [app: :backstage,
      version: "0.1.0",
-     elixir: "~> 1.3",
+     elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      deps: deps()]
@@ -14,7 +14,7 @@ defmodule Backstage.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger, :gen_stage],
+    [extra_applications: [:logger],
      mod: {Backstage.Application, []}]
   end
 
