@@ -31,6 +31,6 @@ defmodule Backstage.Mixfile do
     [{:gen_stage, "~> 0.11"},
      {:ecto, "~> 2.1"},
      {:poison, "~> 3.0"},
-     {:postgrex, "~> 0.12"}]
+     {:postgrex, ">= 0.0.0"}]
   end
 end
