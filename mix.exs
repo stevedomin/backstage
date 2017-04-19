@@ -28,7 +28,7 @@ defmodule Backstage.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:gen_stage, "~> 0.8"},
+    [{:gen_stage, "~> 0.11"},
      {:ecto, "~> 2.1"},
      {:poison, "~> 2.2"},
      {:postgrex, "~> 0.12"}]

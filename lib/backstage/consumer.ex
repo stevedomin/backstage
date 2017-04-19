@@ -1,9 +1,7 @@
 defmodule Backstage.Consumer do
   @moduledoc "Consumer"
 
-  use Experimental.GenStage
-
-  alias Experimental.GenStage
+  use GenStage
 
   alias Backstage.TaskSupervisor
   alias Backstage.Job

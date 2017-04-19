@@ -1,9 +1,8 @@
 defmodule Backstage.Producer do
   @moduledoc "Producer"
 
-  use Experimental.GenStage
+  use GenStage
 
-  alias Experimental.GenStage
   alias Backstage.Job
 
   @name __MODULE__
