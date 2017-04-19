@@ -30,7 +30,7 @@ defmodule Backstage.Mixfile do
   defp deps do
     [{:gen_stage, "~> 0.11"},
      {:ecto, "~> 2.1"},
-     {:poison, "~> 3.0"},
+     {:poison, "~> 2.0 or ~> 3.0"},
      {:postgrex, ">= 0.0.0"}]
   end
 end
